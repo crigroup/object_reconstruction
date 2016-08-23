@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <name>object_reconstruction</name>
+  <version>0.1.0</version>
+  <description>The object_reconstruction package</description>
+  <maintainer email="fsuarez.ruiz@pmail.ntu.edu.sg">Francisco Suarez Ruiz</maintainer>
+  <license>BSD</license>
+  <author email="fsuarez.ruiz@pmail.ntu.edu.sg">Francisco Suarez Ruiz</author>
+  <url type="website">https://github.com/crigroup/object_reconstruction</url>
+  <url type="bugtracker">https://github.com/crigroup/object_reconstruction/issues</url>
+  <url type="repository">https://github.com/crigroup/object_reconstruction</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>rospy</run_depend>
+  
+  <run_depend>object_recognition_capture</run_depend>
+  <run_depend>object_recognition_core</run_depend>
+  <run_depend>object_recognition_reconstruction</run_depend>
+</package>
