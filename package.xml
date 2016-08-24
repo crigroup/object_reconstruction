@@ -13,6 +13,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <run_depend>rospy</run_depend>
   
+  <run_depend>ensenso</run_depend>
   <run_depend>object_recognition_capture</run_depend>
   <run_depend>object_recognition_core</run_depend>
   <run_depend>object_recognition_reconstruction</run_depend>
