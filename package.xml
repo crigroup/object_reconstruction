@@ -15,5 +15,6 @@
   
   <run_depend>criros</run_depend>
   <run_depend>ensenso</run_depend>
+  <run_depend>meshlab</run_depend>
   <run_depend>ros_numpy</run_depend>
 </package>

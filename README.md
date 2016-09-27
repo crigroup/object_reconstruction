@@ -8,3 +8,10 @@
 ### Our setup
 * Ensenso camera N35 (Ethernet version) (Tested with N35-802-16-BL and N35-804-16-BL models)
 * ROS Kinetic (Ubuntu 16.04, 64 bits)
+
+### Basic Requirements
+
+For Ubuntu 16.04 you need to install `pcl-tools`:
+```
+sudo apt-get install pcl-tools
+```
