@@ -50,9 +50,14 @@ class MeshObject(object):
     np.set_printoptions(precision=6, suppress=True)
     self.leaf_size = options.leaf_size
     self.seg_radius_crop = options.seg_radius_crop
+    self.stat_filter_k = options.stat_filter_k
+    self.stat_filter_std_dev = options.stat_filter_std_dev
     self.seg_z_crop = options.seg_z_crop
     self.seg_z_min = options.seg_z_min
     self.bag = rosbag.Bag(options.bag, 'r')
+    self.final_stat_filter_k = options.final_stat_filter_k
+    self.final_stat_filter_std_dev = options.final_stat_filter_std_dev
+    self.final_leaf_size = options.final_leaf_size
     self.basename = os.path.splitext(os.path.abspath(options.bag))[0]
     rospy.on_shutdown(self.on_shutdown)
   
@@ -105,8 +110,8 @@ class MeshObject(object):
       # Statistical outlier filter x 2
       for i in range(2):
         stat_filter = cloud.make_statistical_outlier_filter()
-        stat_filter.set_mean_k(100)
-        stat_filter.set_std_dev_mul_thresh(0.002)
+        stat_filter.set_mean_k(self.stat_filter_k)
+        stat_filter.set_std_dev_mul_thresh(self.stat_filter_std_dev)
         cloud = stat_filter.filter()
       # Match point clouds transformation
       transformed_cloud = []
@@ -122,9 +127,14 @@ class MeshObject(object):
     # Final statistical outlier filter
     cloud = pcl.PointCloud( all_points )
     stat_filter = cloud.make_statistical_outlier_filter()
-    stat_filter.set_mean_k(50)
-    stat_filter.set_std_dev_mul_thresh(2)
+    stat_filter.set_mean_k(self.final_stat_filter_k)
+    stat_filter.set_std_dev_mul_thresh(self.final_stat_filter_std_dev)
     cloud = stat_filter.filter()
+    # Final voxel grid filter
+    voxel_filter = cloud.make_voxel_grid_filter()
+    leaf_size = np.ones(3)*self.final_leaf_size
+    voxel_filter.set_leaf_size(*leaf_size)
+    cloud = voxel_filter.filter()
     # Generate files
     devnull = open('/dev/null', 'w')
     pcd_filename = self.basename + '.pcd'
@@ -168,11 +178,27 @@ def parse_args():
   parser.add_argument('--seg_radius_crop', metavar='SEG_RADIUS_CROP', type=float, default= 0.3,
                       help='The amount to keep in the XY plane (meters)' 
                       'relative to the table center. default=%(default).3f')
+  parser.add_argument('--stat_filter_k', metavar='STAT_FILTER_K', type=int, default=100,
+                      help='The number of neighbors to analyze for each point. default=%(default)')
+  parser.add_argument('--stat_filter_std_dev', metavar='STAT_FILTER_STD_DEV', type=float, default=0.002,
+                      help='All points who have a distance larger than 1 standard deviation'
+                      'of the mean distance to the query point will be marked as outliers '
+                      'and removed. default=%(default).4f')
   parser.add_argument('--seg_z_crop', metavar='SEG_Z_CROP', type=float, default= 0.5,
                       help='The amount to keep in the z direction (meters)' 
                       'relative to the coordinate frame defined by the pose. default=%(default).3f')
   parser.add_argument('--seg_z_min', metavar='SEG_Z_MIN', type=float, default= 0.005,
                       help='The amount to crop above the plane, in meters. default=%(default).4f')
+  parser.add_argument('--final_stat_filter_k', metavar='FINAL_STAT_FILTER_K', type=int, default=10,
+                      help='The number of neighbors to analyze for each point. default=%(default)')
+  parser.add_argument('--final_stat_filter_std_dev', metavar='FINAL_STAT_FILTER_STD_DEV',
+                      type=float, default=1,
+                      help='All points who have a distance larger than 1 standard deviation'
+                      'of the mean distance to the query point will be marked as outliers '
+                      'and removed. default=%(default).4f')
+  parser.add_argument('--final_leaf_size', metavar='FINAL_LEAF_SIZE', type=float, default= 0.002,
+                      help='Leaf size (meters) to be used to downsample + filter' 
+                      'the initial point cloud. default=%(default).3f')
   parser.add_argument('--debug', action='store_true',
                       help='If set, will show additional debugging information')
   args = parser.parse_args(rospy.myargv()[1:])
