@@ -30,6 +30,7 @@ class CaptureServer(Snatcher):
     self.nviews = options.nviews
     self.preview = options.preview
     self.angle_thresh = options.angle_thresh
+    self.manual = options.manual
     self.observations = []
     # Create rosbag if needed
     if not self.preview:
@@ -48,8 +49,15 @@ class CaptureServer(Snatcher):
     self.enable_lights(projector=True, frontlight=False)
     self.enable_streaming(cloud=True, images=True)
     rospy.sleep(2.0)
-    pbar = progressbar.ProgressBar(widgets=['Pattern observations: ', progressbar.SimpleProgress()], maxval=self.nviews).start()
-    while len(self.observations) < self.nviews and not rospy.is_shutdown():
+    if self.manual:
+      pbar = progressbar.ProgressBar(widgets=['Pattern observations (Press enter to continue or [q/Q] to finish...): ', progressbar.Counter()]).start()
+    else:
+      pbar = progressbar.ProgressBar(widgets=['Pattern observations: ', progressbar.SimpleProgress()], maxval=self.nviews).start()
+    while not rospy.is_shutdown():
+      if self.manual:
+        key = criros.utils.read_key(echo=False)
+        if key == 'q':
+          break
       # Take snapshot
       self.reset_snapshots()
       self.take_snapshot(exposure_time=0.001, success_fn=self.has_images_and_cloud)
@@ -67,9 +75,18 @@ class CaptureServer(Snatcher):
         self.bag.write('{0}depth/points'.format(self.ns), self.point_cloud, stamp)
         self.bag.write('{0}pattern/pose'.format(self.ns), self.pose_msg, stamp)
       pbar.update(len(self.observations))
-    pbar.finish()
+      if not self.manual and len(self.observations) < self.nviews:
+        # Done collecting observations in automatic mode
+        break
+    if not self.manual:
+      pbar.finish()
   
   def process_observation(self, Tpattern):
+    # Add observation in manual mode
+    if self.manual:
+      self.observations.append(Tpattern)
+      return True
+    # In automatic mode we check the delta angle before adding an observation
     min_delta = float('inf')
     novel = False
     for observation in self.observations:
@@ -89,6 +106,7 @@ class CaptureServer(Snatcher):
     self.enable_streaming(cloud=False, images=False)
     # Close rosbag
     self.bag.close()
+    print '\nObservations have been saved to: {0}'.format(self.bag.filename)
   
   def received_sync_msgs(self):
     required_keys = ['raw_left', 'raw_right', 'rect_left', 'rect_right', 'pattern_pose']
@@ -121,9 +139,11 @@ object sparsely, depending on the angle_thresh setting."""),
   parser.add_argument('-n', '--nviews', metavar='NVIEWS', dest='nviews', type=int,
                       default=36,
                       help='Number of desired views. default=%(default)d')
+  parser.add_argument('--manual', action='store_true',
+                      help='If set, the user needs to press enter every time an observation is to be added')
   parser.add_argument('-p', '--preview', dest='preview', action='store_true',
                       default=False, help='Preview the pose estimator.')
-  parser.add_argument('--debug', action='store_true',     
+  parser.add_argument('--debug', action='store_true',
                       help='If set, will show additional debugging information')
   args = parser.parse_args(rospy.myargv()[1:])
   if not args.preview and len(args.bag) < 1:
