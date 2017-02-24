@@ -29,6 +29,8 @@ Examples:
 rosrun object_reconstruction mesh_object.py -i right_frame.bag --leaf_size 0.002 --seg_z_min 0.01 --final_stat_filter_k 20 --final_stat_filter_std_dev 1 --final_leaf_size 0.001 --stat_filter_k -1 --seg_radius_crop -1
 
 rosrun object_reconstruction mesh_object.py -i left_frame.bag --leaf_size 0.002 --seg_z_min 0.01 --final_stat_filter_k 50 --final_stat_filter_std_dev 1 --final_leaf_size 0.001 --stat_filter_k -1 --seg_radius_crop -1
+
+rosrun object_reconstruction mesh_object.py -i bottle.bag --leaf_size -1 --final_leaf_size 0.001 --seg_z_min 0.01 --seg_radius_crop 0.15 --stat_filter_k -1 --stat_filter_std_dev 0.5 --final_stat_filter_k 10 --final_stat_filter_std_dev 1
 """
 
 
@@ -100,10 +102,11 @@ class MeshObject(object):
       cloud_xyz.shape = (-1,3)
       cloud = pcl.PointCloud( cloud_xyz )
       # Voxel grid filter
-      voxel_filter = cloud.make_voxel_grid_filter()
-      leaf_size = np.ones(3)*self.leaf_size
-      voxel_filter.set_leaf_size(*leaf_size)
-      cloud = voxel_filter.filter()
+      if self.leaf_size > 0:
+        voxel_filter = cloud.make_voxel_grid_filter()
+        leaf_size = np.ones(3)*self.leaf_size
+        voxel_filter.set_leaf_size(*leaf_size)
+        cloud = voxel_filter.filter()
       # Euclidian filter
       cloud_xyz = np.asarray(cloud)
       Tpattern = poses.pop(0)
@@ -118,8 +121,8 @@ class MeshObject(object):
           inside_radius = True
         if (inside_z_range and inside_radius):
           inliers.append(i)
-      cloud = pcl.PointCloud( cloud_xyz[inliers] )
-      # Statistical outlier filter x 2
+      cloud = cloud.extract(inliers)
+      # Statistical outlier filter
       if self.stat_filter_k > 0:
         stat_filter = cloud.make_statistical_outlier_filter()
         stat_filter.set_mean_k(self.stat_filter_k)

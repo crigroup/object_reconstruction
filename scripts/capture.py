@@ -75,7 +75,7 @@ class CaptureServer(Snatcher):
         self.bag.write('{0}depth/points'.format(self.ns), self.point_cloud, stamp)
         self.bag.write('{0}pattern/pose'.format(self.ns), self.pose_msg, stamp)
       pbar.update(len(self.observations))
-      if not self.manual and len(self.observations) < self.nviews:
+      if not self.manual and len(self.observations) == self.nviews:
         # Done collecting observations in automatic mode
         break
     if not self.manual:
